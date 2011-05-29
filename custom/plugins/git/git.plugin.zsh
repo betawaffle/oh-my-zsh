@@ -6,7 +6,7 @@ alias ga='git add'
 alias gb='git branch'
 alias gc='git commit -v'
 alias gd='git difftool'
-alias gf='git fetch'
+alias gf='git fetch --all'
 alias gl='git lg'
 alias gm='git merge --no-ff'
 alias gp='git difftool --cached'
@@ -23,11 +23,13 @@ compdef _git gm=git-merge
 compdef _git gp=git-difftool
 compdef _git gs=git-status
 
+alias g..='git checkout HEAD~'
+
 alias gps='git diff --cached --stat'
 
 compdef _git gps=git-diff
 
-alias branches='git branch -a'
+alias branches='git branch -vva'
 alias stashes='git stash list'
 
 function stashes-deleted {
