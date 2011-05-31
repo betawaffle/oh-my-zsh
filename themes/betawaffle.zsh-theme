@@ -1,43 +1,84 @@
-function git_state {
-	ref=$(git rev-parse HEAD 2>/dev/null | git name-rev --stdin --name-only 2>/dev/null) || return
-	echo "$ZSH_THEME_GIT_PROMPT_PREFIX$(parse_git_dirty)$ref$ZSH_THEME_GIT_PROMPT_SUFFIX"
+local rvm_path="$HOME/.rvm"
+
+# Colors
+local col_sha='yellow'
+local col_branch='blue'
+local col_remote='magenta'
+
+local return_char='↵' # ↳
+local return_code="%(?.%{$fg[green]%}$return_char.%{$fg[red]%}%? $return_char)%{$reset_color%}"
+
+local prompt_char="%(#.%{$fg[red]%}.%{$fg[green]%})%#%{$reset_color%}"
+local prompt_user="%(#.%{$fg[red]%}.%{$fg[green]%})%n%{$reset_color%}"
+local prompt_host="%{$fg[magenta]%}%m%{$reset_color%}"
+local prompt_path="%{$fg[blue]%}%~%{$reset_color%}"
+
+function rvm_prompt {
+	ruby_version=$($rvm_path/bin/rvm-prompt s i v p g 2> /dev/null) || return
+	echo -n "rvm: %{$fg[red]%}"
+	echo -n "$ruby_version" | sed \
+		-e "s/ruby-1.8.7-p334/1.8.7/" \
+		-e "s/ruby-1.9.2-p180/1.9.2/" \
+		-e "s/jruby-1.6.2/jruby/" \
+		-e "s/rbx-head/rbx/" \
+		-e "s/ree-1.8.7-2011.03/ree/" \
+		-e "s/maglev-25876/maglev/" \
+		-e "s/macruby-0.10/macruby/" \
+		-e "s/@/%{$reset_color%} %{$fg_bold[yellow]%}/"
+	echo -n "%{$reset_color%}"
 }
 
-local rvm_info='%{$fg_bold[red]%}$(rvm_prompt_info s i v p g)%{$reset_color%}'
-local git_info='$(git_state)$(git_prompt_ahead)'
+function git_prompt {
+	sha=$(git rev-parse --short HEAD 2>/dev/null) || return
+	echo -n "git: "
+	ref=$(git symbolic-ref HEAD 2> /dev/null)
+	if [ -z "$ref" ]; then
+		echo -n "%{$fg[$col_sha]%}$sha%{$reset_color%}"
+		return
+	fi
+	branch=${ref#refs/heads/}
+	echo -n "%{$fg[$col_branch]%}$branch%{$reset_color%} (%{$fg[$col_sha]%}$sha%{$reset_color%})"
+	remote=$(git config --get "branch.$branch.remote") || return
+	echo -n " -> %{$fg[$col_remote]%}$remote%{$reset_color%}"
+}
 
-local return_code="%(?..%{$fg[red]%}↳ %?%{$reset_color%}
-)"
+function prompt_footer {
+	FOOTER="\e[$LINES;0f# ${prompt_user} @ ${prompt_host} : ${prompt_path}"
+	FEET=1
+	for FOOT ($@); do
+		if [ -z "$FOOT" ]; then
+			continue;
+		fi
+		FOOTER="\e[$[$LINES-$FEET];0f# $FOOT$FOOTER"
+		FEET=$[$FEET+1]
+	done
+	echo -ne "\e[s" # Save Cursor
+	echo -ne "\e[0;$[$LINES-$FEET]r"
+	echo -ne "$FOOTER"
+	echo -ne "\e[u" # Restore Cursor
+}
 
-local prompt_user='%{$fg[cyan]%}%n%{$reset_color%}'
-local prompt_host='%{$fg[magenta]%}%m%{$reset_color%}'
-local prompt_path='%{$fg[blue]%}%~%{$reset_color%}'
-local prompt_char='%#'
+local footer_rvm='$(rvm_prompt yellow)'
+local footer_git='$(git_prompt)'
+local footer="$(prompt_footer $footer_rvm $footer_git)"
 
-#[ ${prompt_user} @ ${prompt_host} : ${prompt_path} ]${git_info} ${rvm_info}
-PROMPT="${return_code}${prompt_path}${git_info}
-${prompt_char} "
-RPROMPT="${rvm_info} [ ${prompt_user} @ ${prompt_host} ]"
+precmd() { prompt_footer $footer_rvm $footer_git }
 
-PROMPT2="%{$fg[yellow]%}>%{$reset_color%} "
-RPROMPT2="%i:%_"
+PROMPT="${prompt_char} " # %{$footer%}
+RPROMPT="${return_code}"
 
-ZSH_THEME_GIT_PROMPT_SHA_BEFORE=" [%{$fg[yellow]%}"
-ZSH_THEME_GIT_PROMPT_SHA_AFTER="%{$reset_color%}]"
+local sprompt_no="%{$fg[red]%}n%{$reset_color%}o"
+local sprompt_yes="%{$fg[green]%}y%{$reset_color%}es"
+local sprompt_edit="%{$fg[yellow]%}e%{$reset_color%}dit"
+local sprompt_abort="%{$fg[yellow]%}a%{$reset_color%}bort"
+local sprompt_options="[$sprompt_no $sprompt_yes $sprompt_edit $sprompt_abort]"
+local sprompt_char="%{$fg[yellow]%}?%{$reset_color%}"
+local sprompt_from="%{$fg[red]%}%R%{$reset_color%}"
+local sprompt_to="%{$fg[green]%}%r%{$reset_color%}"
+SPROMPT="$sprompt_char $sprompt_from -> $sprompt_to $sprompt_options "
 
-ZSH_THEME_GIT_PROMPT_PREFIX=" on "
-ZSH_THEME_GIT_PROMPT_SUFFIX="%{$reset_color%}"
-ZSH_THEME_GIT_PROMPT_DIRTY="%{$fg[yellow]%}"
-ZSH_THEME_GIT_PROMPT_CLEAN="%{$fg[green]%}"
-ZSH_THEME_GIT_PROMPT_AHEAD=" with unpushed changes"
-ZSH_THEME_GIT_PROMPT_BEHIND=" with unpulled changes"
-
-ZSH_THEME_GIT_PROMPT_UNTRACKED=" ?"
-ZSH_THEME_GIT_PROMPT_ADDED=" A"
-ZSH_THEME_GIT_PROMPT_MODIFIED=" M"
-ZSH_THEME_GIT_PROMPT_RENAMED=" R"
-ZSH_THEME_GIT_PROMPT_DELETED=" D"
-ZSH_THEME_GIT_PROMPT_UNMERGED=" U"
+PROMPT2="%{$footer%}%{$fg[yellow]%}>%{$reset_color%} "
+RPROMPT2="%_"
 
 #  1: Directory
 #  2: Symbolic Link
