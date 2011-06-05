@@ -5,18 +5,14 @@ local col_sha='yellow'
 local col_branch='blue'
 local col_remote='magenta'
 
-local return_char='↵' # ↳
-local return_code="%(?.%{$fg[green]%}$return_char.%{$fg[red]%}%? $return_char)%{$reset_color%}"
-
-local prompt_char="%(#.%{$fg[red]%}.%{$fg[green]%})%#%{$reset_color%}"
-local prompt_user="%(#.%{$fg[red]%}.%{$fg[green]%})%n%{$reset_color%}"
-local prompt_host="%{$fg[magenta]%}%m%{$reset_color%}"
-local prompt_path="%{$fg[blue]%}%~%{$reset_color%}"
+# ↳ ↵
+local return_char="↳"
+local return_code="%(?.%{$fg[green]%}.%{$fg[red]%})$return_char%(?.. %?)%{$reset_color%}"
 
 function rvm_prompt {
-	ruby_version=$($rvm_path/bin/rvm-prompt s i v p g 2> /dev/null) || return
-	echo -n "rvm: %{$fg[red]%}"
-	echo -n "$ruby_version" | sed \
+	# $rvm_path/bin/rvm-prompt
+	ver=$(rvm-prompt s i v p g 2> /dev/null) || return
+	echo -n "%{$fg[red]%}$ver%{$reset_color%} " | sed \
 		-e "s/ruby-1.8.7-p334/1.8.7/" \
 		-e "s/ruby-1.9.2-p180/1.9.2/" \
 		-e "s/jruby-1.6.2/jruby/" \
@@ -25,66 +21,42 @@ function rvm_prompt {
 		-e "s/maglev-25876/maglev/" \
 		-e "s/macruby-0.10/macruby/" \
 		-e "s/@/%{$reset_color%} %{$fg_bold[yellow]%}/"
-	echo -n "%{$reset_color%}"
 }
 
 function git_prompt {
 	sha=$(git rev-parse --short HEAD 2>/dev/null) || return
-	echo -n "git: "
-	ref=$(git symbolic-ref HEAD 2> /dev/null)
-	if [ -z "$ref" ]; then
-		echo -n "%{$fg[$col_sha]%}$sha%{$reset_color%}"
-		return
-	fi
-	branch=${ref#refs/heads/}
-	echo -n "%{$fg[$col_branch]%}$branch%{$reset_color%} (%{$fg[$col_sha]%}$sha%{$reset_color%})"
-	remote=$(git config --get "branch.$branch.remote") || return
-	echo -n " -> %{$fg[$col_remote]%}$remote%{$reset_color%}"
-}
-
-function prompt_footer {
-	FOOTER="\e[$LINES;0f# ${prompt_user} @ ${prompt_host} : ${prompt_path}"
-	FEET=1
-	for FOOT ($@); do
-		if [ -z "$FOOT" ]; then
-			continue;
+	echo -n "\n%{$fg[green]%}± "
+	if ref=$(git symbolic-ref HEAD 2> /dev/null); then
+		if branch=${ref#refs/heads/}; then
+			echo -n "%{$fg[$col_branch]%}$branch%{$reset_color%} (%{$fg[$col_sha]%}$sha%{$reset_color%})"
+			if remote=$(git config --get "branch.$branch.remote"); then
+				echo -n " -> %{$fg[$col_remote]%}$remote%{$reset_color%}"
+			fi
 		fi
-		FOOTER="\e[$[$LINES-$FEET];0f# $FOOT$FOOTER"
-		FEET=$[$FEET+1]
-	done
-	echo -ne "\e[s" # Save Cursor
-	echo -ne "\e[0;$[$LINES-$FEET]r"
-	echo -ne "$FOOTER"
-	echo -ne "\e[u" # Restore Cursor
+	else
+		echo -n "%{$fg[$col_sha]%}$sha%{$reset_color%}"
+	fi
 }
-
-#feet=('$(rvm_prompt yellow)' '$(git_prompt)')
 
 preexec() {
-	feet=("$(rvm_prompt yellow)" "$(git_prompt)")
-	FOOTER="\e[$LINES;0f# ${prompt_user} @ ${prompt_host} : ${prompt_path}"
-	FEET=1
-	for FOOT ($feet); do
-		if [ -z "$FOOT" ]; then
-			continue;
-		fi
-		FOOTER="\e[$[$LINES-$FEET];0f# $FOOT$FOOTER"
-		FEET=$[$FEET+1]
-	done
-	echo -ne "\e[s" # Save Cursor
-	echo -ne "\e[0;$[$LINES-$FEET]r"
-	echo -ne "${(%)FOOTER}"
-	echo -ne "\e[u" # Restore Cursor
+	clear
 }
 
-local footer_rvm='$(rvm_prompt yellow)'
-local footer_git='$(git_prompt)'
-local footer="$(prompt_footer $footer_rvm $footer_git)"
+precmd() {
+	
+}
 
-#precmd() { prompt_footer $footer_rvm $footer_git }
+local ps_char="%(#.%{$fg[red]%}.%{$fg[green]%})%#%{$reset_color%}"
+local ps_user="%(#.%{$fg[red]%}.%{$fg[green]%})%n%{$reset_color%}"
+local ps_host="%{$fg[magenta]%}%m%{$reset_color%}"
+local ps_path="%{$fg[blue]%}%~%{$reset_color%}"
 
-PROMPT="%{$footer%}${prompt_char} " # %{$footer%}
-RPROMPT="${return_code}"
+local ps_rvm='$(rvm_prompt)'
+local ps_git='$(git_prompt)'
+
+PROMPT="${return_code}${ps_git}
+${ps_char} " # %{$footer%}
+RPROMPT=" ${ps_rvm}[${ps_user} @ ${ps_host} : ${ps_path}]"
 
 local sprompt_no="%{$fg[red]%}n%{$reset_color%}o"
 local sprompt_yes="%{$fg[green]%}y%{$reset_color%}es"
