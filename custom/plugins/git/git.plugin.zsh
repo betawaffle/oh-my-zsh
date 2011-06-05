@@ -16,11 +16,11 @@ alias gx='gitx'
 compdef _git ga=git-add
 compdef _git gb=git-branch
 compdef _git gc=git-commit
-compdef _git gd=git-difftool
+compdef _git gd=git-diff
 compdef _git gf=git-fetch
 compdef _git gl=git-log
 compdef _git gm=git-merge
-compdef _git gp=git-difftool
+compdef _git gp=git-diff
 compdef _git gs=git-status
 
 alias g..='git checkout HEAD~'
