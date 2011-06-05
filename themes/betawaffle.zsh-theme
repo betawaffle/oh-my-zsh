@@ -28,69 +28,6 @@ function rvm_prompt {
 	echo -n "%{$reset_color%}"
 }
 
-# function git_prompt {
-# 	local git_dir="$(git rev-parse --git-dir 2>/dev/null)"
-# 	if [ ! -n "$git_dir" ]; then return; fi
-# 	local sha=$(git rev-parse --short HEAD 2>/dev/null)
-# 	local ref=$(git symbolic-ref HEAD 2>/dev/null)
-# 	local tag=$(git describe --exact-match HEAD 2>/dev/null)
-# 	echo -n "git: "
-# 	
-# 	
-# 	local b
-# 	local r
-# 	if [ -d "$git_dir/rebase-apply" ]; then
-# 		if test -f "$git_dir/rebase-apply/rebasing"; then
-# 			r=" rebasing"
-# 		elif test -f "$git_dir/rebase-apply/applying"; then
-# 			r=" applying"
-# 		else
-# 			r=" applying/rebasing"
-# 		fi
-# 		b="$ref"
-# 	elif [ -f "$git_dir/rebase-merge/interactive" ]; then
-# 		if [ -f "$git_dir/rebase-merge/interactive" ]; then
-# 			r=" rebasing interactively"
-# 		else
-# 			r=" rebasing merging"
-# 		fi
-# 		b="$(cat "$git_dir/rebase-merge/head-name")"
-# 	elif [ -f "$g/MERGE_HEAD" ]; then
-# 		r=" merging"
-# 		b="$(git symbolic-ref HEAD 2>/dev/null)"
-# 	else
-# 		if [ -f "$git_dir/BISECT_LOG" ]; then
-# 			r=" bisecting"
-# 		fi
-# 		if ! b="$(git symbolic-ref HEAD 2>/dev/null)"; then
-# 		   if ! b="$(git describe --exact-match HEAD 2>/dev/null)"; then
-# 			  b="$(cut -c1-7 "$git_dir/HEAD")..."
-# 		   fi
-# 		fi
-# 	fi
-# 	local branch=${ref#refs/heads/}
-# 	local remote=$(git config --get "branch.$branch.remote")
-# 	echo -n "git: %{$fg[blue]%}${b##refs/heads/}%{$reset_color%}$r"
-# 	
-# 	sha=$(git rev-parse --short HEAD 2>/dev/null) || return
-# 	echo -n "git: "
-# 	ref=$(git symbolic-ref HEAD 2> /dev/null)
-# 	if [ -z "$ref" ]; then
-# 		echo -n "%{$fg[$col_sha]%}$sha%{$reset_color%}"
-# 		return
-# 	fi
-# 	branch=
-# 	echo -n "%{$fg[$col_branch]%}$branch%{$reset_color%} (%{$fg[$col_sha]%}$sha%{$reset_color%})"
-# 	remote=$(git config --get "branch.$branch.remote") || return
-# 	echo -n " -> %{$fg[$col_remote]%}$remote%{$reset_color%}"
-# 	
-# 	if [ -n "$1" ]; then
-# 		 printf "$1" "${b##refs/heads/}$r"
-# 	else
-# 		 printf "git: %{$fg[blue]%}%s%{$reset_color%} (%s)" "${b##refs/heads/}$r"
-# 	fi
-# }
-
 function git_prompt {
 	sha=$(git rev-parse --short HEAD 2>/dev/null) || return
 	echo -n "git: "
@@ -118,6 +55,25 @@ function prompt_footer {
 	echo -ne "\e[s" # Save Cursor
 	echo -ne "\e[0;$[$LINES-$FEET]r"
 	echo -ne "$FOOTER"
+	echo -ne "\e[u" # Restore Cursor
+}
+
+#feet=('$(rvm_prompt yellow)' '$(git_prompt)')
+
+preexec() {
+	feet=("$(rvm_prompt yellow)" "$(git_prompt)")
+	FOOTER="\e[$LINES;0f# ${prompt_user} @ ${prompt_host} : ${prompt_path}"
+	FEET=1
+	for FOOT ($feet); do
+		if [ -z "$FOOT" ]; then
+			continue;
+		fi
+		FOOTER="\e[$[$LINES-$FEET];0f# $FOOT$FOOTER"
+		FEET=$[$FEET+1]
+	done
+	echo -ne "\e[s" # Save Cursor
+	echo -ne "\e[0;$[$LINES-$FEET]r"
+	echo -ne "${(%)FOOTER}"
 	echo -ne "\e[u" # Restore Cursor
 }
 
