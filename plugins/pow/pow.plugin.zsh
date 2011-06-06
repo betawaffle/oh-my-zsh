@@ -8,3 +8,7 @@ function kapow {
 }
 
 compctl -W ~/.pow -/ kapow
+
+function pow-update {
+  curl get.pow.cx | sh
+}
