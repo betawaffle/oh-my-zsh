@@ -31,6 +31,12 @@ function rvm-update {
 	rvm reload # TODO: Reload rvm completion?
 }
 
+# TODO: Accept arguments for ruby, gemset, and location.
+function rvm-init {
+	echo "rvm use $RUBY_VERSION@$(basename $PWD) --create" > .rvmrc
+	rvm rvmrc trust
+}
+
 # TODO: Make this usable w/o rvm.
 function gems {
 	local current_ruby=`rvm-prompt i v p`
