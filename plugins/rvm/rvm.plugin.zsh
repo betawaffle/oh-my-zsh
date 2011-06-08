@@ -43,8 +43,7 @@ function gems {
 	local current_gemset=`rvm-prompt g`
 
 	gem list $@ | sed -E \
-		-e "s/\([0-9]+(\.[0-9]+)+(,? .+)?\)/$fg[blue]&$reset_color/g" \
-		-e "s/\([0-9]+(\.[0-9a-z])+(,? .+)?\)/$fg[yellow]&$reset_color/g" \
+		-e "s/\([0-9]+(\.[0-9a-z]+)+(,? .+)?\)/$fg[blue]&$reset_color/g" \
 		-e "s|$(echo $rvm_path)|$fg[magenta]\$rvm_path$reset_color|g" \
 		-e "s/$current_ruby@global/$fg[yellow]&$reset_color/g" \
 		-e "s/$current_ruby$current_gemset$/$fg[green]&$reset_color/g"
